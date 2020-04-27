@@ -1,5 +1,5 @@
 "use strict";
-let takeQuiz = (($) => {
+try { window.takeQuiz = (($) => {
 
 /* CONSTANTS */
 
@@ -51,6 +51,50 @@ let CRITERIA_SCORE_WEIGHT = 0.75;
 /* What is the maximum (worst) rank an outcome needs to achieve in order for
    interventions affecting that outcome to be asked about? */
 let INTERVENTION_FILTER_MAX_OUTCOME_RANK = 2;
+	
+/* BACKWARDS COMPATABILITY*/
+//https://github.com/feross/fromentries
+if (!Object.prototype.fromEntries) {
+	Object.defineProperty(Object.prototype, 'fromEntries', {
+		configurable: true,
+		value: function fromEntries (iterable) {
+			return [...iterable].reduce((obj, [key, val]) => {
+				obj[key] = val;
+				return obj;
+			}, {});
+		},
+		writable: true
+	});
+}
+
+//https://github.com/jonathantneal/array-flat-polyfill
+if (!Array.prototype.flat) {
+	Object.defineProperty(Array.prototype, 'flat', {
+		configurable: true,
+		value: function flat () {
+			var depth = isNaN(arguments[0]) ? 1 : Number(arguments[0]);
+			return depth ? Array.prototype.reduce.call(this, function (acc, cur) {
+				if (Array.isArray(cur)) {
+					acc.push.apply(acc, flat.call(cur, depth - 1));
+				} else {
+					acc.push(cur);
+				}
+				return acc;
+			}, []) : Array.prototype.slice.call(this);
+		},
+		writable: true
+	});
+}
+
+if (!Array.prototype.flatMap) {
+	Object.defineProperty(Array.prototype, 'flatMap', {
+		configurable: true,
+		value: function flatMap (callback) {
+			return Array.prototype.map.apply(this, arguments).flat();
+		},
+		writable: true
+	});
+}
 
 /* UTILS */
 
@@ -510,8 +554,6 @@ class Charity {
 	get links() { return this._links; }
 	set links(value) {
 		this._links = value;
-		Object.defineProperty(this._links, "comprehensive_review",
-							  {get: () => this.links.review + "/#comprehensive-review"});
 		if (this.status === TOP_CHARITY) this._links.donation = "https://animalcharityevaluators.org/donate/#tc";
 	}
 
@@ -578,7 +620,7 @@ class Charity {
 				  $title = (this.links.logo || this.links.long_logo) ? $("") : $("<h4>").html(this.name),
 				  $details = this.makeDetails(),
 				  $donation = this.makeExtButton("Donate Now", this.links.donation),
-				  $review = this.makeExtButton("Read Comprehensive Review", this.links.comprehensive_review),
+				  $review = this.makeExtButton("Read Review", this.links.review),
 				  $menu = $("<menu>").append($donation, $review);
 
 			return jQueryCollection($logo, $title, $details, $menu);
@@ -1102,7 +1144,7 @@ const criteria_question = new RankQuestion(
 const EAAF_question = new BinaryRadioQuestion(
 	DONATE_TO_EAAF,
 	"Are you interested in supporting ACE's Effective Animal Advocacy Fund?",
-	"<p>The Effective Animal Advocacy Fund (EAA Fund) allows ACE to support a broader set of charities beyond our Top and Standout Charity selections. These include promising and effective organizations that are doing valuable work in their communities to reduce animal suffering. These groups are often smaller than our recommended charities, have a shorter track record, or work in important but neglected areas. Information about our most recent round of grants is available <a href='https://animalcharityevaluators.org/blog/announcing-our-fall-2019-eaa-fund-grants/'>here</a>.</p><p>Donors who are interested in higher-risk/higher-reward investments may be more drawn to the Effective Animal Advocacy Fund, while donors who are more risk-averse may find the Recommended Charity Fund to be a better fit.</p>",
+	"<p>The Effective Animal Advocacy Fund (EAA Fund) allows ACE to support a broader set of charities beyond our Top and Standout Charity selections. These include promising and effective organizations that are doing valuable work in their communities to reduce animal suffering. These groups are often smaller than our recommended charities, have a shorter track record, or work in important but neglected areas. Information about our most recent round of grants is available <a href='https://animalcharityevaluators.org/blog/announcing-our-fall-2019-eaa-fund-grants/' target='_blank' rel='noopener'>here</a>.</p><p>Donors who are interested in higher-risk/higher-reward investments may be more drawn to the Effective Animal Advocacy Fund, while donors who are more risk-averse may find the Recommended Charity Fund to be a better fit.</p>",
 	"I am interested in supporting the EAA fund",
 	"I am not interested in supporting the EAA fund"
 );
@@ -1147,7 +1189,7 @@ class CharityResultsPage {
 
 		makeReviewProcessCard() {
 			const $title = $("<h4>").addClass("charity-name").html("Our Review Process"),
-				  $contents = $('<p>ACE evaluates animal advocacy organizations in order to find those that are able to do the most good with additional donations. Following anti-speciesist principles, we recognize that success can take many forms; we aim to compare these different types of success by the amount of animal suffering they can prevent or reduce. <b>Read more about our evaluation process <a href="https://animalcharityevaluators.org/charity-reviews/evaluating-charities">here</a>.</b></p>');
+				  $contents = $('<p>ACE evaluates animal advocacy organizations in order to find those that are able to do the most good with additional donations. Following anti-speciesist principles, we recognize that success can take many forms; we aim to compare these different types of success by the amount of animal suffering they can prevent or reduce. <b>Read more about our evaluation process <a href="https://animalcharityevaluators.org/charity-reviews/evaluating-charities" target="_blank" rel="noopener">here</a>.</b></p>');
 			return $("<li>").addClass("charity-info our-review-process").append($title, $contents);
 		}
 }
@@ -1158,3 +1200,7 @@ const quiz = new Quiz([criteria_question, outcomes_question, interventions_quest
 return function takeQuiz() { $(".entry-content").html(quiz.render()); };
 
 })(jQuery);
+
+} catch (e) {
+	$(".entry-content").html("Your browser is unsupported, or there was an unexpected error. Try updating your browser, or <a href='https://animalcharityevaluators.org/about/contact-us/'>contact us</a> if you think there is another issue.");
+}
