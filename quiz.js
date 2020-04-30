@@ -62,7 +62,7 @@ try {
         MOVEMENT_STRENGTHENING = "Movement Strengthening",
         INCREASE_VEGAN_OPTIONS = "Increase Vegan Options",
         GOVERNMENT_OUTREACH = "Government Outreach",
-        ORGANISING_CONFERENCES_AND_EVENTS = "Organising Conferences and Events",
+        ORGANISING_CONFERENCES_AND_EVENTS = "Organizing Conferences and Events",
         SUPPORTING_FOOD_INNOVATION = "Supporting Food Innovation",
         WORKING_IN_NEGLECTED_COUNTRIES = "Working in Neglected Countries",
         DONATE_TO_EAAF = "Donate to the EAA Fund";
