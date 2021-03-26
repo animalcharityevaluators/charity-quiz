@@ -3,7 +3,7 @@ try { window.takeQuiz = (($) => {
 
 /* CONSTANTS */
 
-const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby49-0TN6tsByhtDrKYHqdL7rDKf5J117LzWSGsM-_kKUJAqiA/exec",
+const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby49-0TN6tsByhtDrKYHqdL7rDKf5J117LzWSGsM-_kKUJAqiA/exec&callback=?",
 	  TOP_CHARITY = "Top Charity",
 	  STANDOUT_CHARITY = "Standout Charity",
 	  PROGRAM = "Estimated impact of programs",
@@ -204,6 +204,7 @@ class Quiz {
 		}
 
 	onSubmit() {
+		console.log("submitted");
 		const data = Object.fromEntries(this.answers);
 		if (this.results) {
 			Object.assign(data, {
@@ -213,7 +214,19 @@ class Quiz {
 			});
 		}
 		data["Google Analytics Client ID"] = readCookie("_ga");
-		$.post(this.post_url, data).done(data => console.log("Results submission status: ", data)); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
+		
+		function CORSpost(post_url, data) {
+			return $.ajax({
+				url: post_url,
+            	crossdomain: true,
+				type: "POST",
+				xhrFields: {
+					withCredentials: true
+				},
+				data: data
+			});
+		}
+		CORSpost(this.post_url, data).done(data => console.log("Results submission status: ", data)); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
 	}
 
 	refreshButtons() {
@@ -658,10 +671,12 @@ class Charity {
 		}
 
 		makeExtButton(text, link) {
-			return $("<a>").addClass('ace-button').attr({
-					  "href": link,
-					  "target": link
-					}).html(text);
+			if (link && text) {
+				return $("<a>").addClass('ace-button').attr({
+						  "href": link,
+						  "target": link
+						}).html(text);
+			}
 		}
 
 		makeLogo() {
@@ -1534,7 +1549,7 @@ class CharityResultsPage {
 				  top_intervention = interventions_question.top_choice,
 				  specific_top_interventions = top_intervention ? charity.interventions[top_intervention.text] : undefined;
 			let intervention_names_for_boast = [];
-			if (top_outcome) {
+			if (top_outcome && specific_top_interventions) {
 				intervention_names_for_boast = shuffle(specific_top_interventions.filter(intervention => intervention.influences(top_outcome.text)).map(intervention => intervention.display_name), 2);
 			}
 			let ret = ""; //return string
