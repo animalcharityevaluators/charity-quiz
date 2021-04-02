@@ -3,7 +3,7 @@ try { window.takeQuiz = (($) => {
 
 /* CONSTANTS */
 
-const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby49-0TN6tsByhtDrKYHqdL7rDKf5J117LzWSGsM-_kKUJAqiA/exec&callback=?",
+const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzWaz7B4GZpNlVePNd5FHy4dmhETKG-67UJ7zWH8uBfUWGAHuXuQ2qHbKZtfkyIn9h/exec&callback=?",
 	  TOP_CHARITY = "Top Charity",
 	  STANDOUT_CHARITY = "Standout Charity",
 	  PROGRAM = "Estimated impact of programs",
