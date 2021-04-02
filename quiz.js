@@ -16,7 +16,7 @@ try {
 
 		/* CONSTANTS */
 
-		var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby49-0TN6tsByhtDrKYHqdL7rDKf5J117LzWSGsM-_kKUJAqiA/exec&callback=?",
+		var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzWaz7B4GZpNlVePNd5FHy4dmhETKG-67UJ7zWH8uBfUWGAHuXuQ2qHbKZtfkyIn9h/exec&callback=?",
 		    TOP_CHARITY = "Top Charity",
 		    STANDOUT_CHARITY = "Standout Charity",
 		    PROGRAM = "Estimated impact of programs",
@@ -296,7 +296,7 @@ try {
 							crossdomain: true,
 							type: "POST",
 							xhrFields: {
-								withCredentials: true
+								withCredentials: false
 							},
 							data: data
 						});
