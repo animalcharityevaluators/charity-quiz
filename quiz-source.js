@@ -221,7 +221,7 @@ class Quiz {
             	crossdomain: true,
 				type: "POST",
 				xhrFields: {
-					withCredentials: true
+					withCredentials: false
 				},
 				data: data
 			});
