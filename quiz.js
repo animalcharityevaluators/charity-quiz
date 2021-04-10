@@ -16,7 +16,7 @@ try {
 
 		/* CONSTANTS */
 
-		var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzWaz7B4GZpNlVePNd5FHy4dmhETKG-67UJ7zWH8uBfUWGAHuXuQ2qHbKZtfkyIn9h/exec&callback=?",
+		var APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzapZNftxsGTceBr9a3XU2NWn3o8MYVn8ZmuZhYxRr3VjI94TrsDEIqIHaalpatVbOR/exec",
 		    TOP_CHARITY = "Top Charity",
 		    STANDOUT_CHARITY = "Standout Charity",
 		    PROGRAM = "Estimated impact of programs",
@@ -283,9 +283,9 @@ try {
 					var data = Object.fromEntries(this.answers);
 					if (this.results) {
 						Object.assign(data, {
-							"1st Choice": this.results[0],
-							"2nd Choice": this.results[1],
-							"3rd Choice": this.results[2]
+							"1st Place": this.results[0],
+							"2nd Place": this.results[1],
+							"3rd Place": this.results[2]
 						});
 					}
 					data["Google Analytics Client ID"] = readCookie("_ga");
