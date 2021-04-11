@@ -192,19 +192,19 @@ class Quiz {
 		}
 
 		if (this.questions_remaining < 0) return this.retake();
-		if (this.is_finished) this.onSubmit();
 
 		$question.html(this.current_question.render());
 		this.refreshButtons();
 		this.scrollToContainerTop();
+		
+		if (this.is_finished) this.sendData();
 	}
 
 		scrollToContainerTop() {
 			$('html, body').scrollTop(this.$render.offset().top);
 		}
 
-	onSubmit() {
-		console.log("submitted");
+	sendData() {
 		const data = Object.fromEntries(this.answers);
 		if (this.results) {
 			Object.assign(data, {
@@ -226,7 +226,7 @@ class Quiz {
 				data: data
 			});
 		}
-		CORSpost(this.post_url, data).done(data => console.log("Results submission status: ", data)); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
+		CORSpost(this.post_url, data).done(data => console.log("Results submission status: ", data.message)); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
 	}
 
 	refreshButtons() {
@@ -1531,7 +1531,7 @@ class CharityResultsPage {
 			  $more_title = $("<h3>").html("Other Recommended Charities"),
 			  $more_results = $("<ol>").addClass("quiz-more-results");
 		
-		this.quiz.results = sorted_charities.map(charity => charity.display_name);
+		this.quiz.results = sorted_charities.map(charity => charity.name);
 
 		if (this.quiz.answers.get(DONATE_TO_AMG)) $top_results.append(AMG.render());
 		for (const [index, charity] of sorted_charities.entries()) {

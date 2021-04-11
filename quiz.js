@@ -265,11 +265,12 @@ try {
 					}
 
 					if (this.questions_remaining < 0) return this.retake();
-					if (this.is_finished) this.onSubmit();
 
 					$question.html(this.current_question.render());
 					this.refreshButtons();
 					this.scrollToContainerTop();
+
+					if (this.is_finished) this.sendData();
 				}
 			}, {
 				key: "scrollToContainerTop",
@@ -277,9 +278,8 @@ try {
 					$('html, body').scrollTop(this.$render.offset().top);
 				}
 			}, {
-				key: "onSubmit",
-				value: function onSubmit() {
-					console.log("submitted");
+				key: "sendData",
+				value: function sendData() {
 					var data = Object.fromEntries(this.answers);
 					if (this.results) {
 						Object.assign(data, {
@@ -302,7 +302,7 @@ try {
 						});
 					}
 					CORSpost(this.post_url, data).done(function (data) {
-						return console.log("Results submission status: ", data);
+						return console.log("Results submission status: ", data.message);
 					}); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
 				}
 			}, {
@@ -1751,7 +1751,7 @@ about <a href='https://animalcharityevaluators.org/blog/announcing-our-fall-2020
 					    $more_results = $("<ol>").addClass("quiz-more-results");
 
 					this.quiz.results = sorted_charities.map(function (charity) {
-						return charity.display_name;
+						return charity.name;
 					});
 
 					if (this.quiz.answers.get(DONATE_TO_AMG)) $top_results.append(AMG.render());
