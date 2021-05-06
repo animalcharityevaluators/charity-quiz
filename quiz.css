@@ -107,7 +107,7 @@ details:not([open]) summary:after {
   background-color: #c3e6e8;
 }
 .rank-option[data-rank="5"],
-.eaaf {
+.amg {
   background-color: #ebf9fa;
 }
 
@@ -183,12 +183,12 @@ details:not([open]) summary:after {
   margin: 1em 0;
 }
 
-.quiz .eaaf,
+.quiz .amg,
 .quiz .charity-info {
   list-style-type: none;
 }
 
-li.eaaf {
+li.amg {
   padding: 1.5em;
   border: 1px dotted;
   border-radius: 1em;
@@ -257,7 +257,7 @@ li.eaaf {
   text-align: center;
 }
 .our-review-process {
-  grid-column: -1/1;
+  grid-column: span 2;
   margin-top: 0;
 }
 .our-review-process h4 {
@@ -285,12 +285,12 @@ li.eaaf {
   }
 }
 
-@media screen and (min-width: 60em) {
+@media only screen and (min-width: 60em) {
   .quiz-top-results {
     grid-template-columns: 4fr 3fr;
   }
   .charity-info[data-rank="1"],
-  .eaaf {
+  .amg {
     grid-column: -1/1;
   }
   .charity-info[data-rank="2"] img,
@@ -305,7 +305,7 @@ li.eaaf {
   }
 }
 
-@media screen and (min-width: 80em) {
+@media only screen and (min-width: 80em) {
   .charity-quiz .site-inner {
     padding: 3em 6em 0 6em;
   }
@@ -313,16 +313,16 @@ li.eaaf {
     grid-template-columns: repeat(5, 1fr);
   }
   .our-review-process {
-    grid-column: span 4;
+    grid-column: span 5;
   }
 }
 
-@media screen and (min-width: 100em) {
+@media only screen and (min-width: 100em) {
   .quiz-more-results {
     grid-template-columns: repeat(6, 1fr);
   }
   .our-review-process {
-    grid-column: -1/1;
+    grid-column: span 2;
   }
 }
 
