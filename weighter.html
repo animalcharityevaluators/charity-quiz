@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>ACE Charity Quiz Weighter</title>
+		<link rel=stylesheet id=ace-charity-work-area-icons-css href='https://animalcharityevaluators.org/wp-content/themes/ace/fonts/ace-charity-work-area-icons/css/ace-charity-work-area-icons.css?ver=1586807326' type=text/css media=all>
+		<link href="https://animalcharityevaluators.org/wp-content/themes/ace/style.css?ver=1586807326" rel="stylesheet">
+		<link rel='stylesheet' id='ace-font-awesome-css' href='https://animalcharityevaluators.org/wp-content/themes/ace/fonts/ace-font-awesome/css/ace-font-awesome.css?ver=5.3.2' type='text/css' media='all' />
+		<link href="acequiz.css" rel="stylesheet">
+		<script type="text/javascript" src="https://gc.kis.v2.scr.kaspersky-labs.com/FD126C42-EBFA-4E12-B309-BB3FDD723AC1/main.js?attr=DCX5LLJSmgCHvmO9rya9KSBEO3tAS8QHZIAZUiUFKTKj-towqmqNIItrxxe1CpALPkSTibkfhRzL7lPU4fP2Bek5UBgIyTt7OQs3xYUsmjjE6SWnAItSAnOjDbVP9sKDHy3O2czLCbeEUr4s1WJ2yLwFiPQLzCL5F0lAJ-4L4Vawk9spc2dQBwQCTC2NfVJoSU52eFNxXx-Y9c1QupBjxEOBj2azAyy_m4nsBptIKtQuoXAFvLnF0qupMhXb6QDBUhERlW1XD38Bii_cnEO3J2LA0FQTBFAA-H3kjZ7ZLwQ" charset="UTF-8"></script><script src=https://animalcharityevaluators.org/wp-includes/js/jquery/jquery.min.js?ver=3.5.1></script>
+		<script src="acequiz.js"></script>
+		<script src="we.js"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+	
+	<style type="text/css">
+		.devpanel { display: grid; grid-template-columns: 2fr 3fr; gap: 2em; }
+			#toolkit { grid-column: 1; }
+			#weights { grid-column 2; }
+			#info { grid-column: 1 / -1; }
+		summary {cursor: pointer; }
+		details.high, .high summary:focus { color: red; }
+		details.low, .low summary:focus { color: blue; }
+		#start-quiz { margin-top: 1em; }
+		.devpanel li {text-overflow: ellipsis; overflow: hidden; }
+		.devpanel ul { margin: 0; }
+		.devpanel ul li { list-style-type: none; display: flex; margin: 1em 0;}
+		.devpanel details {flex: 1; }
+		.devpanel input[type=number] {
+			padding: 0;
+			width: 5em;
+			margin-right: 1em;
+			color: black;
+		}
+		#toolkit input[type=number] { width: 3em; }
+		.devpanel section > * {
+			margin-bottom: 1em;
+		}
+		.devpanel button { margin-top: 1em; }
+		.devpanel details:not([open]) summary:after {content: ""; }
+		.devpanel img {
+			width: 2em;
+			margin-right: 1em;
+			height: 2em;
+		}
+		.devpanel label {line-height: 2em; }
+	</style>
+		
+	</head>
+	<body class="charity-quiz">
+		<div class="site-inner">
+		<header class="entry-header"><h1 class="entry-title">Charity Quiz Weighter</h1></header>
+		<div class="entry-content"><div class="devpanel">
+			<section id="toolkit">
+				<h4>Weighting toolkit</h4>
+				<p class="preupload">Upload a .csv of results to begin. (Download from <a href="https://docs.google.com/spreadsheets/d/1z67ApvFt6yfq2E3wV-5dLUTpUGM1iJ1euSw4fa36VCg">this spreadsheet</a>.)</p><input type="file" id="csv" accept=".csv">
+				<p class="postupload" id="desired_scores"></p>
+				<span class="postupload"><label for="tolerance-for-suggestions">Shoot for a margin of error of </label><input id="tolerance-for-suggestions" type="number" value="10" step="1">%.</span> <br />
+				<span class="postupload"><label for="TC-ratio">A Top Charity should have a score </label><input id="TC-ratio" type="number" value="2" step="0.1">x as great as a Standout Charity.</span>
+				<button class="postupload" id="weight_automatically">Weight automatically</button> <span class="postupload" id="automatic_progress"></span><!--Progress: <span id="turn">0</span>/100-->
+						<h4>Test out the quiz</h4>
+		You can test the quiz as a user here. Make sure to note down any changes you made to charity weights before testing.
+		<button id="start-quiz" onclick="takeQuiz(); " >Take quiz</button>
+			</section>
+			<section id="weights">
+				<h4>Charities</h4>
+				<p></p>
+				<ul></ul>
+			</section>
+			<section id="info">
+				<h4>How this works</h4>
+				<p>Use the text boxes in the right sidebar to change the weights assigned to our recommended charities. Once you upload a CSV file of user or staff quiz answers, you can see how charities are performing. Blue text indicates scores that are too low, and red text scores that are too high: try to tweak weights so that the text in the right sidebar is black (indicating it meets your chosen accuracy standard, 10% to begin with). Remember, you still need to copy the array of charity weights into the charity quiz's Javascript files.</p>
+				<p>The automatic weighting can take a pretty long time per round, up to a minute or so: if your browser indicates the tab is nonresponsive, just choose to let it keep running and it will resolve eventually. If the initial results are very uneven, doing some manual weighting yourself before trying the automatic version may save time. If the automatic weighter is not able to progress, it is probably stuck in a loop. You can try doing some manual weighting to achieve more accuracy, or lowering the desired margin of error to encourage the automatic weighter to try smaller changes. Especially with small samples of answers, however, there are limits to how low of a margin of error is attainable.</p>
+			</section>
+		</div></div>
+		</div>
+	</body>
+</html>
