@@ -14,6 +14,11 @@ function floatToNDecimals(float, N) {
 	return float.toLocaleString(undefined, {minimumFractionDigits: N});
 }
 
+
+function strToNDecimalFloat(float, N) {
+	return parseFloat(parseFloat(float).toFixed(N));
+}
+
 function floatToSignedPercent(float) {
 	return (float > 0 ? '+' : '') + 
 		   float.toLocaleString(undefined, {style: "percent", minimumFractionDigits: 1});
@@ -67,7 +72,8 @@ function decreaseStep(n, times=1, max_step=1) {
 const charities = global("ACEQuiz", "charities"),
 	  Charity = window.ACEQuiz.Charity,
 	  TOP_CHARITY = window.ACEQuiz.TOP_CHARITY,
-	  STANDOUT_CHARITY = window.ACEQuiz.STANDOUT_CHARITY;
+	  STANDOUT_CHARITY = window.ACEQuiz.STANDOUT_CHARITY,
+	  quiz = window.ACEQuiz.quiz;
 
 Object.defineProperty(charities, "weights", {
   get() { return charities.map(charity => charity.handicap); },
@@ -80,7 +86,7 @@ const places_to_points = new ZeroMap([
 	[3, 0.5]
 ]);
 
-let TOLERANCE_FOR_SUGGESTIONS = 0.15,
+let TOLERANCE_FOR_SUGGESTIONS = 0.1,
 	TC_RATIO = 2;
 
 // CHANGES TO PREEXISTING CLASSES
@@ -88,24 +94,21 @@ let question_weights_table,
 	desired_scores;
 
 Charity.prototype.renderWeightDisplay = function () {
-	
 	const id = this.name.replaceAll(' ', '') + "-weight",
 		  $range = $("<input>").attr({"id": id, "type": "number", "step": 0.02})
 							   .val(this.handicap).data("charity", this),
 		  $img = $("<img>").attr({"src": this.links.square_logo, "alt": this.name, "width": "1em", "height": "1em"});
 	let $score;
+
 	if (question_weights_table) {
-		
 		const [score, explanation] = this.calculateTestScore(true),
 			  deviation = this.calculateTestError(); // note this actually computes the test score twice
 		$score = $("<details>").html(`<summary><b>${this.name}</b>: ${score} (${floatToSignedPercent(deviation)})</summary>${explanation}`);
 		if (deviation < -1 * TOLERANCE_FOR_SUGGESTIONS) $score.addClass("low");
 		if (deviation > TOLERANCE_FOR_SUGGESTIONS) $score.addClass("high");
-		
 	} else {
 		$score = $("<label>").attr("for", id).html(this.name);
 	}
-	
 	
 	$range.change(e => this.handicap = $range.val());
 	return $("<li>").append($range, $img, $score);
@@ -147,6 +150,18 @@ function csv_to_question_weights_table(csv) {
 	return result;
 }
 
+function submitNRandomQuizzes(N) {
+	for (let i = 0; i < N; i++) {
+		for (const question of quiz.questions) {
+			if (!question.ranked_options) continue;
+			question.reset(true);
+			question.render();
+			quiz.randomizeAnswers();
+		}
+		quiz.sendData();
+	}
+}
+
 function calculateDesiredScores(trials) {
 	const total_scores = Array.from(places_to_points.values()).slice(0, charities.length).reduce((a, b) => a + b, 0) * trials,
 		  n_top = charities.filter(charity => charity.status === TOP_CHARITY).length,
@@ -167,7 +182,7 @@ function displayCharities() {
 		updateResults();
 	}
 	$("#weights ul").html("");
-	$("#weights p").html("[" + charities.weights.toString() + "]");
+	if (!$("#weights-arr").is(":focus")) $("#weights-arr").html(charities.weights.toString());
 	charities.forEach(charity => {
 		$charity = charity.renderWeightDisplay();
 		$charity.find("input").change(e => {
@@ -265,6 +280,10 @@ function devpage_init() {
 		desired_scores = calculateDesiredScores(question_weights_table.length);
 		displayCharities();
 	});
+	$("#weights-arr").attr("contenteditable", true).on("input", e => {
+		charities.weights = e.target.innerHTML.split(",").map(weight => strToNDecimalFloat(weight, 3));
+		displayCharities();
+	});
 	$("#weight_automatically").click(e => {
 		$("#automatic_progress").html("Weighting in progress; please be patient.");
 		window.setTimeout(() => {
@@ -272,6 +291,9 @@ function devpage_init() {
 			displayCharities();
 			$("#automatic_progress").html("Weighting round complete; press button again to resume.");
 		}, 500);
+	});
+	$("#generate_randoms").click(e => {
+		submitNRandomQuizzes($("#n_random_quizzes").val());
 	});
 }
 

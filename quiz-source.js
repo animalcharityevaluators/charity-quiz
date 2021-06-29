@@ -33,9 +33,9 @@ const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzapZNftxsGTceBr
 	  INVESTIGATIONS = "Investigations",
 	  INFLUENCING_LEGISLATION = "Influencing legislation and legal work",
 	  DEMONSTRATIONS = "Demonstrations",
-      MOVEMENT_BUILDING = "Movement building",
+	  MOVEMENT_BUILDING = "Movement building",
 	  EVENT_ORGANIZING = "Event organizing",
-      INSTITUTIONAL_OUTREACH = "Institutional outreach",
+          INSTITUTIONAL_OUTREACH = "Institutional outreach",
 	  PLANT_BASED_RESOURCES = "Plant-based resources",
 	  DONATE_TO_AMG = "Donate to ACE Movement Grants";
 
@@ -96,16 +96,17 @@ function jQueryCollection(...$objects) {
 	return $objects.reduce(($objects, $object) => $objects.add($object));
 }
 
-function shuffle(array, length = array.length) { // Fisher-Yates algorithm
-	for (let i = 0; i < length - 2; i++) {
+function shuffle(array, length = array.length) { // Fisher-Yates algorithm, mutator
+	if (array.length < length) length = array.length;
+	for (let i = 0; i < length; i++) {
 		const j = randomIntBetween(i, array.length);
 		[array[i], array[j]] = [array[j], array[i]];
 	}
 	return array.slice(0, length);
 }
 
-	function randomIntBetween(min /* inclusive */, max /* exclusive */) {
-		return Math.floor(Math.random() * (max - min)) + min;
+	function randomIntBetween(min /* inclusive */, max /* exclusive */, include_max = false) {
+		return Math.floor(Math.random() * (max - min + (include_max ? 1 : 0))) + min;
 	}
 
 function linkifyFirstSubstring(string, substring, url) {
@@ -229,7 +230,15 @@ class Quiz {
 		CORSpost(this.post_url, data).done(data => console.log("Results submission status: ", data.message)); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
 	}
 
+	randomizeAnswers() {
+		for (const question of this.questions) {
+			if (question.randomizeAnswers) question.randomizeAnswers();
+		}
+	}
+
 	refreshButtons() {
+		if (!this.$render) return;
+
 		if (this.is_finished) {
 			this.displayNextButton("Retake Quiz");
 			this.hideResetButton();
@@ -320,7 +329,6 @@ class RankQuestion {
 		this.normalise_if_blank = normalise_if_blank;
 		this.instructions = `Click up to ${this.max_rank} choices to rank them from most important to least important.`;
 		this.reset_text = "Reset Ranks";
-		this.options_ranked = 0;
 		this.$render = undefined;
 		this.is_answered = false;
 		this.quiz = undefined;
@@ -331,6 +339,7 @@ class RankQuestion {
 		return this.filter ? this.options.filter(this.filter) : this.options;
 	}
 	get ranked_options() { return this.options.filter(option => !isNaN(option.rank)); }
+	get max_rank_assigned() { return this.ranked_options.length; }
 	get top_choice() { return this.options.find(option => option.rank === 1); }
 	
 	get total_weight() {
@@ -371,21 +380,27 @@ class RankQuestion {
 	}
 
 	assignNextRankTo(option) {
-		if (this.options_ranked === this.max_rank) return;
-		option.rank = ++this.options_ranked;
+		if (this.max_rank_assigned === this.max_rank) return;
+		option.rank = this.max_rank_assigned + 1;
 		this.is_answered = true;
 		this.quiz.refreshButtons();
 	}
 
 	clearRanksBeyond(rank) {
+		/* Remove ranks from all options whose rank exceeds `rank`. */
 		for (const option of this.options) {
 			if (option.rank > rank) option.rank = NaN;
 		}
-		if (rank < this.options_ranked) this.options_ranked = rank;
-		if (rank == 0) {
+		if (rank < 0) {
 			this.is_answered = false;
 			this.quiz.refreshButtons();
 		}
+	}
+
+	randomizeAnswers() {
+		const random_number = randomIntBetween(this.is_skippable ? 0 : 1, this.max_rank + 1),
+				options_to_rank = shuffle(this.filtered_options, random_number);
+		if (random_number > 0) options_to_rank.forEach(option => this.assignNextRankTo(option));
 	}
 	
 	reset(rerender = false) {
@@ -393,7 +408,7 @@ class RankQuestion {
 			this.$render = undefined;
 			this.options = shuffle(this.options);
 		}
-		this.clearRanksBeyond(0);
+		this.clearRanksBeyond(-Infinity);
 	}
 	
 	weightFromRank(rank) { return (rank > 0) ? 1 + this.max_rank - rank : 0; }
@@ -445,6 +460,12 @@ class BinaryRadioQuestion {
 		return $("<div>").addClass('radio-option').append($input, $label);
 	}
 
+	randomizeAnswers() {
+		if (!this.is_skippable) this.answer = Math.random() >= 0.5;
+		const random_number = randomIntBetween(0, 3);
+		if (random_number < 2) this.answer = random_number === 0;
+	}
+
 	render() {
 		if (this.$render) return this.$render;
 
@@ -466,6 +487,7 @@ class BinaryRadioQuestion {
 	
 	get weights() { return new Map([[this.key, this.answer]]); }
 	get answers() { return this.weights; }
+
 }
 
 class RankOption {
@@ -509,7 +531,7 @@ class RankOption {
 		const $container = this.elements.$container;
 
 		if (rank === this.rank || !$container) return;
-		rank ? $container.attr("data-rank", rank) :	$container.removeAttr("data-rank");
+		!isNaN(rank) ? $container.attr("data-rank", rank) :	$container.removeAttr("data-rank");
 	}
 }
 
@@ -1367,10 +1389,9 @@ const AMG = new Charity("ACE Movement Grants");
 
 	AMG.reset = () => {};
 
-const charities = [ASF, GFI, THL, WAI, AI, CIWF, Essere, Faun, FIAPO, GFF, SA, SVB, VEGHOY];
-let handicaps = [0.95, 0.75, 0.77, 1, //TCs ----  AFTER DEBUGGING CHANGE `let` to `const`
-                 0.72, 1.0, 0.9, 1.35, 1.3, 1.85, 0.85, 0.97, 1]; //SCs  Essere 1.18->1.05
-window.setHandicaps = (new_handicaps) => {handicaps = new_handicaps; } // COMMENT THIS LINE OUT AFTER DEBUGGING!!!!
+let charities = [ASF, GFI, THL, WAI, AI, CIWF, Essere, Faun, FIAPO, GFF, SA, SVB, VEGHOY];
+const handicaps = [0.786,0.723,0.723,1.357, //TCs
+                 0.538,0.712,0.611,2.6,1.024,2.7,0.673,0.657,0.6]; //SCs
 charities.forEach((charity, index) => charity.handicap = handicaps[index]);
 
 /* QUESTIONS */
@@ -1511,7 +1532,7 @@ class CharityResultsPage {
 		this.quiz = undefined;
 	}
 	
-	orderCharities() {
+	orderCharities(charities) {
 		if (this.quiz.questions.some(question => question !== EAAF_question && question.is_answered)) {
 			return Charity.getCharitiesSortedByAscendingScores(charities, this.quiz.weights);
 		} else {
@@ -1522,7 +1543,7 @@ class CharityResultsPage {
 	}
 
 	render() {
-		const sorted_charities = this.orderCharities();
+		const sorted_charities = this.orderCharities(charities);
 	
 		const first_choice = sorted_charities[0],
 			  $top_title = $("<h3>").html("Your Results"),
@@ -1574,10 +1595,26 @@ we recognize that success can take many forms; we aim to compare these different
 }
 
 const quiz = new Quiz([criteria_question, outcomes_question, interventions_question,
-					   EAAF_question], new CharityResultsPage(), APP_SCRIPT_URL); //FOR DEBUG MODE: DebugResultsPage instead of CharityResultsPage
+					  		  EAAF_question], new CharityResultsPage(), APP_SCRIPT_URL);
 	
-return function takeQuiz() { $(".entry-content").html(quiz.render()); };
+// exports for weighting page
+if (window.ACEQuiz && window.ACEQuiz.using_weighter) {
+	Object.assign(window.ACEQuiz, {
+		Charity: Charity,
+		TOP_CHARITY: TOP_CHARITY,
+		STANDOUT_CHARITY: STANDOUT_CHARITY,
+		get charities() {
+			return charities;
+		},
+		set charities(target) {
+			charities = target;
+		},
+		quiz: quiz
+	});
+}
 
+return function takeQuiz() { $(".entry-content").html(quiz.render()); };
+	
 })(jQuery);
 
 } catch (e) {

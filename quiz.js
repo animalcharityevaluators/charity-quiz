@@ -122,8 +122,9 @@ try {
 
 		function shuffle(array) {
 			var length = arguments.length <= 1 || arguments[1] === undefined ? array.length : arguments[1];
-			// Fisher-Yates algorithm
-			for (var i = 0; i < length - 2; i++) {
+			// Fisher-Yates algorithm, mutator
+			if (array.length < length) length = array.length;
+			for (var i = 0; i < length; i++) {
 				var j = randomIntBetween(i, array.length);
 				var _ref3 = [array[j], array[i]];
 				array[i] = _ref3[0];
@@ -133,7 +134,9 @@ try {
 		}
 
 		function randomIntBetween(min /* inclusive */, max /* exclusive */) {
-			return Math.floor(Math.random() * (max - min)) + min;
+			var include_max = arguments.length <= 2 || arguments[2] === undefined ? false : arguments[2];
+
+			return Math.floor(Math.random() * (max - min + (include_max ? 1 : 0))) + min;
 		}
 
 		function linkifyFirstSubstring(string, substring, url) {
@@ -306,8 +309,38 @@ try {
 					}); //SAVE RESPONSE TO GOOGLE SHEET - comment this out during testing, remove 'done' function when done programming
 				}
 			}, {
+				key: "randomizeAnswers",
+				value: function randomizeAnswers() {
+					var _iteratorNormalCompletion3 = true;
+					var _didIteratorError3 = false;
+					var _iteratorError3 = undefined;
+
+					try {
+						for (var _iterator3 = this.questions[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+							var question = _step3.value;
+
+							if (question.randomizeAnswers) question.randomizeAnswers();
+						}
+					} catch (err) {
+						_didIteratorError3 = true;
+						_iteratorError3 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion3 && _iterator3.return) {
+								_iterator3.return();
+							}
+						} finally {
+							if (_didIteratorError3) {
+								throw _iteratorError3;
+							}
+						}
+					}
+				}
+			}, {
 				key: "refreshButtons",
 				value: function refreshButtons() {
+					if (!this.$render) return;
+
 					if (this.is_finished) {
 						this.displayNextButton("Retake Quiz");
 						this.hideResetButton();
@@ -477,7 +510,6 @@ try {
 				this.normalise_if_blank = normalise_if_blank;
 				this.instructions = "Click up to " + this.max_rank + " choices to rank them from most important to least important.";
 				this.reset_text = "Reset Ranks";
-				this.options_ranked = 0;
 				this.$render = undefined;
 				this.is_answered = false;
 				this.quiz = undefined;
@@ -502,44 +534,55 @@ try {
 			}, {
 				key: "assignNextRankTo",
 				value: function assignNextRankTo(option) {
-					if (this.options_ranked === this.max_rank) return;
-					option.rank = ++this.options_ranked;
+					if (this.max_rank_assigned === this.max_rank) return;
+					option.rank = this.max_rank_assigned + 1;
 					this.is_answered = true;
 					this.quiz.refreshButtons();
 				}
 			}, {
 				key: "clearRanksBeyond",
 				value: function clearRanksBeyond(rank) {
-					var _iteratorNormalCompletion3 = true;
-					var _didIteratorError3 = false;
-					var _iteratorError3 = undefined;
+					/* Remove ranks from all options whose rank exceeds `rank`. */
+					var _iteratorNormalCompletion4 = true;
+					var _didIteratorError4 = false;
+					var _iteratorError4 = undefined;
 
 					try {
-						for (var _iterator3 = this.options[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-							var option = _step3.value;
+						for (var _iterator4 = this.options[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+							var option = _step4.value;
 
 							if (option.rank > rank) option.rank = NaN;
 						}
 					} catch (err) {
-						_didIteratorError3 = true;
-						_iteratorError3 = err;
+						_didIteratorError4 = true;
+						_iteratorError4 = err;
 					} finally {
 						try {
-							if (!_iteratorNormalCompletion3 && _iterator3.return) {
-								_iterator3.return();
+							if (!_iteratorNormalCompletion4 && _iterator4.return) {
+								_iterator4.return();
 							}
 						} finally {
-							if (_didIteratorError3) {
-								throw _iteratorError3;
+							if (_didIteratorError4) {
+								throw _iteratorError4;
 							}
 						}
 					}
 
-					if (rank < this.options_ranked) this.options_ranked = rank;
-					if (rank == 0) {
+					if (rank < 0) {
 						this.is_answered = false;
 						this.quiz.refreshButtons();
 					}
+				}
+			}, {
+				key: "randomizeAnswers",
+				value: function randomizeAnswers() {
+					var _this4 = this;
+
+					var random_number = randomIntBetween(this.is_skippable ? 0 : 1, this.max_rank + 1),
+					    options_to_rank = shuffle(this.filtered_options, random_number);
+					if (random_number > 0) options_to_rank.forEach(function (option) {
+						return _this4.assignNextRankTo(option);
+					});
 				}
 			}, {
 				key: "reset",
@@ -550,7 +593,7 @@ try {
 						this.$render = undefined;
 						this.options = shuffle(this.options);
 					}
-					this.clearRanksBeyond(0);
+					this.clearRanksBeyond(-Infinity);
 				}
 			}, {
 				key: "weightFromRank",
@@ -568,6 +611,11 @@ try {
 					return this.options.filter(function (option) {
 						return !isNaN(option.rank);
 					});
+				}
+			}, {
+				key: "max_rank_assigned",
+				get: function get() {
+					return this.ranked_options.length;
 				}
 			}, {
 				key: "top_choice",
@@ -590,38 +638,6 @@ try {
 				get: function get() {
 					var weights = new Map(),
 					    uniform_weight = this.normalise_if_blank ? this.total_weight / this.options.length : 0;
-					var _iteratorNormalCompletion4 = true;
-					var _didIteratorError4 = false;
-					var _iteratorError4 = undefined;
-
-					try {
-						for (var _iterator4 = this.options[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
-							var option = _step4.value;
-
-							var weight = this.is_answered ? this.weightFromRank(option.rank) : uniform_weight;
-							weights.set(option.text, weight);
-						}
-					} catch (err) {
-						_didIteratorError4 = true;
-						_iteratorError4 = err;
-					} finally {
-						try {
-							if (!_iteratorNormalCompletion4 && _iterator4.return) {
-								_iterator4.return();
-							}
-						} finally {
-							if (_didIteratorError4) {
-								throw _iteratorError4;
-							}
-						}
-					}
-
-					return weights;
-				}
-			}, {
-				key: "answers",
-				get: function get() {
-					var answers = new Map();
 					var _iteratorNormalCompletion5 = true;
 					var _didIteratorError5 = false;
 					var _iteratorError5 = undefined;
@@ -630,7 +646,8 @@ try {
 						for (var _iterator5 = this.options[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
 							var option = _step5.value;
 
-							if (option.rank > 0) answers.set(option.text, option.rank);
+							var weight = this.is_answered ? this.weightFromRank(option.rank) : uniform_weight;
+							weights.set(option.text, weight);
 						}
 					} catch (err) {
 						_didIteratorError5 = true;
@@ -643,6 +660,37 @@ try {
 						} finally {
 							if (_didIteratorError5) {
 								throw _iteratorError5;
+							}
+						}
+					}
+
+					return weights;
+				}
+			}, {
+				key: "answers",
+				get: function get() {
+					var answers = new Map();
+					var _iteratorNormalCompletion6 = true;
+					var _didIteratorError6 = false;
+					var _iteratorError6 = undefined;
+
+					try {
+						for (var _iterator6 = this.options[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
+							var option = _step6.value;
+
+							if (option.rank > 0) answers.set(option.text, option.rank);
+						}
+					} catch (err) {
+						_didIteratorError6 = true;
+						_iteratorError6 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion6 && _iterator6.return) {
+								_iterator6.return();
+							}
+						} finally {
+							if (_didIteratorError6) {
+								throw _iteratorError6;
 							}
 						}
 					}
@@ -688,7 +736,7 @@ try {
 			}, {
 				key: "createOption",
 				value: function createOption(text, value, $options) {
-					var _this4 = this;
+					var _this5 = this;
 
 					var $input = $("<input>").attr({
 						type: 'radio',
@@ -698,9 +746,16 @@ try {
 					}),
 					    $label = $("<label>").attr('for', this.id_prefix + '-' + value).html(text);
 					$input.change(function (event) {
-						return _this4.answer = $(event.target).attr('data-value') === 'true';
+						return _this5.answer = $(event.target).attr('data-value') === 'true';
 					});
 					return $("<div>").addClass('radio-option').append($input, $label);
+				}
+			}, {
+				key: "randomizeAnswers",
+				value: function randomizeAnswers() {
+					if (!this.is_skippable) this.answer = Math.random() >= 0.5;
+					var random_number = randomIntBetween(0, 3);
+					if (random_number < 2) this.answer = random_number === 0;
 				}
 			}, {
 				key: "render",
@@ -770,7 +825,7 @@ try {
 			}, {
 				key: "render",
 				value: function render() {
-					var _this5 = this;
+					var _this6 = this;
 
 					if (this.elements.$container) return this.elements.$container;
 
@@ -780,7 +835,7 @@ try {
 
 					if (this.iconHTML) $container.append($(this.iconHTML).addClass("rank-icon"));
 					$container.append($text, $description).click(function () {
-						return _this5.onClick();
+						return _this6.onClick();
 					});
 					this.rank = NaN;
 					return $container;
@@ -803,7 +858,7 @@ try {
 					var $container = this.elements.$container;
 
 					if (rank === this.rank || !$container) return;
-					rank ? $container.attr("data-rank", rank) : $container.removeAttr("data-rank");
+					!isNaN(rank) ? $container.attr("data-rank", rank) : $container.removeAttr("data-rank");
 				}
 			}]);
 
@@ -881,13 +936,13 @@ try {
 				value: function score(weights) {
 					var score = 0;
 					// `weights`: of the form `Map({[MOVEMENT_BUILDING]: 4, [INCREASED_AVAILABILITY_OF_ANIMAL_FREE_PRODUCTS]: 5})`
-					var _iteratorNormalCompletion6 = true;
-					var _didIteratorError6 = false;
-					var _iteratorError6 = undefined;
+					var _iteratorNormalCompletion7 = true;
+					var _didIteratorError7 = false;
+					var _iteratorError7 = undefined;
 
 					try {
-						for (var _iterator6 = this.outcomes_influenced[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-							var outcome = _step6.value;
+						for (var _iterator7 = this.outcomes_influenced[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+							var outcome = _step7.value;
 
 							if (!Array.isArray(outcome)) {
 								score += weights.get(outcome);
@@ -895,43 +950,43 @@ try {
 								// `outcome[0]`: directly influenced outcome (e.g. "Stronger Animal Advocacy Movement")
 								// `outcome.splice(1)`: array of indirectly influenced outcomes (e.g. ["Decreased Consumption of Animal Products", "Improvement of Welfare Standards"])
 								score += Math.pow(weights.get(outcome[0]), 1 / 4);
-								var _iteratorNormalCompletion7 = true;
-								var _didIteratorError7 = false;
-								var _iteratorError7 = undefined;
+								var _iteratorNormalCompletion8 = true;
+								var _didIteratorError8 = false;
+								var _iteratorError8 = undefined;
 
 								try {
-									for (var _iterator7 = outcome.splice(1)[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-										var indirect_outcome = _step7.value;
+									for (var _iterator8 = outcome.splice(1)[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+										var indirect_outcome = _step8.value;
 
 										score += Math.sqrt(weights.get(outcome[0]) * weights.get(indirect_outcome));
 									}
 								} catch (err) {
-									_didIteratorError7 = true;
-									_iteratorError7 = err;
+									_didIteratorError8 = true;
+									_iteratorError8 = err;
 								} finally {
 									try {
-										if (!_iteratorNormalCompletion7 && _iterator7.return) {
-											_iterator7.return();
+										if (!_iteratorNormalCompletion8 && _iterator8.return) {
+											_iterator8.return();
 										}
 									} finally {
-										if (_didIteratorError7) {
-											throw _iteratorError7;
+										if (_didIteratorError8) {
+											throw _iteratorError8;
 										}
 									}
 								}
 							}
 						}
 					} catch (err) {
-						_didIteratorError6 = true;
-						_iteratorError6 = err;
+						_didIteratorError7 = true;
+						_iteratorError7 = err;
 					} finally {
 						try {
-							if (!_iteratorNormalCompletion6 && _iterator6.return) {
-								_iterator6.return();
+							if (!_iteratorNormalCompletion7 && _iterator7.return) {
+								_iterator7.return();
 							}
 						} finally {
-							if (_didIteratorError6) {
-								throw _iteratorError6;
+							if (_didIteratorError7) {
+								throw _iteratorError7;
 							}
 						}
 					}
@@ -1070,52 +1125,18 @@ try {
 				key: "scoreCriteria",
 				value: function scoreCriteria(weights) {
 					var score = 0;
-					var _iteratorNormalCompletion8 = true;
-					var _didIteratorError8 = false;
-					var _iteratorError8 = undefined;
-
-					try {
-						for (var _iterator8 = Object.entries(this.criteria)[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-							var _step8$value = _slicedToArray(_step8.value, 2);
-
-							var key = _step8$value[0];
-							var criterion = _step8$value[1];
-
-							score += weights.get(key) * criterion.score();
-						}
-					} catch (err) {
-						_didIteratorError8 = true;
-						_iteratorError8 = err;
-					} finally {
-						try {
-							if (!_iteratorNormalCompletion8 && _iterator8.return) {
-								_iterator8.return();
-							}
-						} finally {
-							if (_didIteratorError8) {
-								throw _iteratorError8;
-							}
-						}
-					}
-
-					return score;
-				}
-			}, {
-				key: "scoreInterventions",
-				value: function scoreInterventions(weights) {
-					var score = 0;
 					var _iteratorNormalCompletion9 = true;
 					var _didIteratorError9 = false;
 					var _iteratorError9 = undefined;
 
 					try {
-						for (var _iterator9 = flattened_entries(this.interventions)[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
+						for (var _iterator9 = Object.entries(this.criteria)[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
 							var _step9$value = _slicedToArray(_step9.value, 2);
 
 							var key = _step9$value[0];
-							var intervention = _step9$value[1];
+							var criterion = _step9$value[1];
 
-							score += weights.get(key) * intervention.score(weights);
+							score += weights.get(key) * criterion.score();
 						}
 					} catch (err) {
 						_didIteratorError9 = true;
@@ -1135,21 +1156,21 @@ try {
 					return score;
 				}
 			}, {
-				key: "interventions",
-				get: function get() {
-					return this._interventions;
-				},
-				set: function set(dict) {
-					this._interventions = dict;
+				key: "scoreInterventions",
+				value: function scoreInterventions(weights) {
+					var score = 0;
 					var _iteratorNormalCompletion10 = true;
 					var _didIteratorError10 = false;
 					var _iteratorError10 = undefined;
 
 					try {
-						for (var _iterator10 = Object.keys(dict)[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-							var key = _step10.value;
+						for (var _iterator10 = flattened_entries(this.interventions)[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+							var _step10$value = _slicedToArray(_step10.value, 2);
 
-							if (!Array.isArray(dict[key])) this._interventions[key] = [dict[key]];
+							var key = _step10$value[0];
+							var intervention = _step10$value[1];
+
+							score += weights.get(key) * intervention.score(weights);
 						}
 					} catch (err) {
 						_didIteratorError10 = true;
@@ -1162,6 +1183,40 @@ try {
 						} finally {
 							if (_didIteratorError10) {
 								throw _iteratorError10;
+							}
+						}
+					}
+
+					return score;
+				}
+			}, {
+				key: "interventions",
+				get: function get() {
+					return this._interventions;
+				},
+				set: function set(dict) {
+					this._interventions = dict;
+					var _iteratorNormalCompletion11 = true;
+					var _didIteratorError11 = false;
+					var _iteratorError11 = undefined;
+
+					try {
+						for (var _iterator11 = Object.keys(dict)[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+							var key = _step11.value;
+
+							if (!Array.isArray(dict[key])) this._interventions[key] = [dict[key]];
+						}
+					} catch (err) {
+						_didIteratorError11 = true;
+						_iteratorError11 = err;
+					} finally {
+						try {
+							if (!_iteratorNormalCompletion11 && _iterator11.return) {
+								_iterator11.return();
+							}
+						} finally {
+							if (_didIteratorError11) {
+								throw _iteratorError11;
 							}
 						}
 					}
@@ -1617,11 +1672,8 @@ capacity of the movement in relatively neglected regions.";
 		AMG.reset = function () {};
 
 		var charities = [ASF, GFI, THL, WAI, AI, CIWF, Essere, Faun, FIAPO, GFF, SA, SVB, VEGHOY];
-		var handicaps = [0.95, 0.75, 0.77, 1, //TCs ----  AFTER DEBUGGING CHANGE `let` to `const`
-		0.72, 1.0, 0.9, 1.35, 1.3, 1.85, 0.85, 0.97, 1]; //SCs  Essere 1.18->1.05
-		window.setHandicaps = function (new_handicaps) {
-			handicaps = new_handicaps;
-		}; // COMMENT THIS LINE OUT AFTER DEBUGGING!!!!
+		var handicaps = [0.786, 0.723, 0.723, 1.357, //TCs
+		0.538, 0.712, 0.611, 2.6, 1.024, 2.7, 0.673, 0.657, 0.6]; //SCs
 		charities.forEach(function (charity, index) {
 			return charity.handicap = handicaps[index];
 		});
@@ -1641,26 +1693,26 @@ capacity of the movement in relatively neglected regions.";
 			/* Return true iff intervention directly influences an outcome that received rank above
       `INTERVENTION_FILTER_MAX_OUTCOME_RANK`in the question `outcomes_question`. */
 			if (outcomes_question.is_answered === false) return true;
-			var _iteratorNormalCompletion11 = true;
-			var _didIteratorError11 = false;
-			var _iteratorError11 = undefined;
+			var _iteratorNormalCompletion12 = true;
+			var _didIteratorError12 = false;
+			var _iteratorError12 = undefined;
 
 			try {
-				for (var _iterator11 = charities[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-					var charity = _step11.value;
+				for (var _iterator12 = charities[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+					var charity = _step12.value;
 
 					if (!charity.interventions) continue;
 					var interventions = charity.interventions[intervention_option.text];
 					if (!interventions) continue;
-					var _iteratorNormalCompletion12 = true;
-					var _didIteratorError12 = false;
-					var _iteratorError12 = undefined;
+					var _iteratorNormalCompletion13 = true;
+					var _didIteratorError13 = false;
+					var _iteratorError13 = undefined;
 
 					try {
-						for (var _iterator12 = interventions.map(function (intervention) {
+						for (var _iterator13 = interventions.map(function (intervention) {
 							return intervention.outcomes_influenced;
-						}).flat()[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-							var outcome = _step12.value;
+						}).flat()[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+							var outcome = _step13.value;
 
 							if (Array.isArray(outcome)) outcome = outcome[0]; // only consider directly influenced outcomes
 							if (outcomes_question.answers.has(outcome) && outcomes_question.answers.get(outcome) <= INTERVENTION_FILTER_MAX_OUTCOME_RANK) {
@@ -1668,31 +1720,31 @@ capacity of the movement in relatively neglected regions.";
 							}
 						}
 					} catch (err) {
-						_didIteratorError12 = true;
-						_iteratorError12 = err;
+						_didIteratorError13 = true;
+						_iteratorError13 = err;
 					} finally {
 						try {
-							if (!_iteratorNormalCompletion12 && _iterator12.return) {
-								_iterator12.return();
+							if (!_iteratorNormalCompletion13 && _iterator13.return) {
+								_iterator13.return();
 							}
 						} finally {
-							if (_didIteratorError12) {
-								throw _iteratorError12;
+							if (_didIteratorError13) {
+								throw _iteratorError13;
 							}
 						}
 					}
 				}
 			} catch (err) {
-				_didIteratorError11 = true;
-				_iteratorError11 = err;
+				_didIteratorError12 = true;
+				_iteratorError12 = err;
 			} finally {
 				try {
-					if (!_iteratorNormalCompletion11 && _iterator11.return) {
-						_iterator11.return();
+					if (!_iteratorNormalCompletion12 && _iterator12.return) {
+						_iterator12.return();
 					}
 				} finally {
-					if (_didIteratorError11) {
-						throw _iteratorError11;
+					if (_didIteratorError12) {
+						throw _iteratorError12;
 					}
 				}
 			}
@@ -1723,7 +1775,7 @@ about <a href='https://animalcharityevaluators.org/blog/announcing-our-fall-2020
 
 			_createClass(CharityResultsPage, [{
 				key: "orderCharities",
-				value: function orderCharities() {
+				value: function orderCharities(charities) {
 					if (this.quiz.questions.some(function (question) {
 						return question !== EAAF_question && question.is_answered;
 					})) {
@@ -1741,7 +1793,7 @@ about <a href='https://animalcharityevaluators.org/blog/announcing-our-fall-2020
 			}, {
 				key: "render",
 				value: function render() {
-					var sorted_charities = this.orderCharities();
+					var sorted_charities = this.orderCharities(charities);
 
 					var first_choice = sorted_charities[0],
 					    $top_title = $("<h3>").html("Your Results"),
@@ -1755,31 +1807,31 @@ about <a href='https://animalcharityevaluators.org/blog/announcing-our-fall-2020
 					});
 
 					if (this.quiz.answers.get(DONATE_TO_AMG)) $top_results.append(AMG.render());
-					var _iteratorNormalCompletion13 = true;
-					var _didIteratorError13 = false;
-					var _iteratorError13 = undefined;
+					var _iteratorNormalCompletion14 = true;
+					var _didIteratorError14 = false;
+					var _iteratorError14 = undefined;
 
 					try {
-						for (var _iterator13 = sorted_charities.entries()[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-							var _step13$value = _slicedToArray(_step13.value, 2);
+						for (var _iterator14 = sorted_charities.entries()[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+							var _step14$value = _slicedToArray(_step14.value, 2);
 
-							var index = _step13$value[0];
-							var charity = _step13$value[1];
+							var index = _step14$value[0];
+							var charity = _step14$value[1];
 
 							charity.rank = index + 1;
 							(index <= 2 ? $top_results : $more_results).append(charity.render());
 						}
 					} catch (err) {
-						_didIteratorError13 = true;
-						_iteratorError13 = err;
+						_didIteratorError14 = true;
+						_iteratorError14 = err;
 					} finally {
 						try {
-							if (!_iteratorNormalCompletion13 && _iterator13.return) {
-								_iterator13.return();
+							if (!_iteratorNormalCompletion14 && _iterator14.return) {
+								_iterator14.return();
 							}
 						} finally {
-							if (_didIteratorError13) {
-								throw _iteratorError13;
+							if (_didIteratorError14) {
+								throw _iteratorError14;
 							}
 						}
 					}
@@ -1828,7 +1880,23 @@ we recognize that success can take many forms; we aim to compare these different
 			return CharityResultsPage;
 		}();
 
-		var quiz = new Quiz([criteria_question, outcomes_question, interventions_question, EAAF_question], new CharityResultsPage(), APP_SCRIPT_URL); //FOR DEBUG MODE: DebugResultsPage instead of CharityResultsPage
+		var quiz = new Quiz([criteria_question, outcomes_question, interventions_question, EAAF_question], new CharityResultsPage(), APP_SCRIPT_URL);
+
+		// exports for weighting page
+		if (window.ACEQuiz && window.ACEQuiz.using_weighter) {
+			Object.assign(window.ACEQuiz, {
+				Charity: Charity,
+				TOP_CHARITY: TOP_CHARITY,
+				STANDOUT_CHARITY: STANDOUT_CHARITY,
+				get charities() {
+					return charities;
+				},
+				set charities(target) {
+					charities = target;
+				},
+				quiz: quiz
+			});
+		}
 
 		return function takeQuiz() {
 			$(".entry-content").html(quiz.render());
